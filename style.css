@@ -7,6 +7,7 @@
   --green: #22c55e;
   --red: #ef4444;
   --blue: #2563eb;
+  --blue-2: #334155;
   --radius: 18px;
 }
 
@@ -23,7 +24,7 @@ body {
 
 .wrap {
   max-width: 1200px;
-  margin: auto;
+  margin: 0 auto;
   padding: 24px;
 }
 
@@ -31,6 +32,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   padding: 24px;
   background: #10182d;
   border: 1px solid var(--line);
@@ -38,8 +40,19 @@ body {
   margin-bottom: 20px;
 }
 
-h1 {
+.topbar h1 {
   margin: 0;
+}
+
+.topbar p {
+  margin: 8px 0 0;
+  color: var(--text);
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -55,8 +68,16 @@ h1 {
   background: var(--blue);
 }
 
+.btn-secondary {
+  background: var(--blue-2);
+}
+
 .btn-danger {
   background: var(--red);
+}
+
+.btn-ghost {
+  background: #263049;
 }
 
 .hidden {
@@ -72,20 +93,52 @@ h1 {
   margin-bottom: 20px;
 }
 
-input {
+.field {
+  margin-bottom: 14px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+input,
+select {
   width: 100%;
   padding: 12px;
-  margin-top: 8px;
-  margin-bottom: 16px;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: #0b1020;
   color: white;
 }
 
+input {
+  margin-top: 0;
+}
+
+.status {
+  margin-top: 14px;
+  color: var(--muted);
+  min-height: 20px;
+}
+
+.hint {
+  margin-top: -4px;
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.actions-row {
+  margin-top: 8px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 8px;
 }
 
 th,
@@ -93,6 +146,11 @@ td {
   padding: 14px;
   border-bottom: 1px solid var(--line);
   text-align: left;
+}
+
+th {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .positive {
@@ -107,7 +165,7 @@ td {
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(4,1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 20px;
 }
@@ -123,4 +181,21 @@ td {
   font-size: 28px;
   display: block;
   margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .cards {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 600px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
 }

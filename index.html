@@ -1,128 +1,115 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stock Tracker</title>
-
   <link rel="stylesheet" href="style.css">
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-
 <body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>Stock Tracker</h1>
+        <p>Portefeuille connecté avec Supabase</p>
+      </div>
 
-<div class="wrap">
-
-  <div class="topbar">
-
-    <div>
-      <h1>Stock Tracker</h1>
-      <p>Portefeuille connecté avec Supabase</p>
+      <div class="topbar-actions">
+        <button id="refreshBtn" class="btn btn-ghost hidden">Actualiser les cours</button>
+        <button id="logoutBtn" class="btn btn-danger hidden">Déconnexion</button>
+      </div>
     </div>
 
-    <button id="logoutBtn" class="btn btn-danger hidden">
-      Déconnexion
-    </button>
+    <div id="authBox" class="auth-box">
+      <h2>Connexion</h2>
 
+      <input type="email" id="email" placeholder="email@gmail.com">
+      <input type="password" id="password" placeholder="mot de passe">
+
+      <button id="signupBtn" class="btn btn-primary">Créer un compte</button>
+      <button id="loginBtn" class="btn btn-secondary">Connexion</button>
+
+      <p id="status" class="status"></p>
+    </div>
+
+    <div id="app" class="hidden">
+      <div class="cards">
+        <div class="card">
+          Valeur totale
+          <strong id="totalValue">0 €</strong>
+        </div>
+
+        <div class="card">
+          Gain / Perte
+          <strong id="totalGain">0 €</strong>
+        </div>
+
+        <div class="card">
+          Performance
+          <strong id="totalPerf">0%</strong>
+        </div>
+
+        <div class="card">
+          Positions
+          <strong id="stockCount">0</strong>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Ajouter une action</h2>
+        <p class="hint">Le prix actuel est récupéré automatiquement.</p>
+
+        <div class="field">
+          <label for="stockSelect">Actions déjà suivies</label>
+          <select id="stockSelect">
+            <option value="">Aucune action suivie</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="symbol">Symbole</label>
+          <input type="text" id="symbol" placeholder="AAPL">
+        </div>
+
+        <div class="field">
+          <label for="name">Nom</label>
+          <input type="text" id="name" placeholder="Apple">
+        </div>
+
+        <div class="field">
+          <label for="quantity">Quantité</label>
+          <input type="number" id="quantity" min="1" placeholder="Quantité">
+        </div>
+
+        <div class="actions-row">
+          <button id="addBtn" class="btn btn-primary">Ajouter</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Mon portefeuille</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Symbole</th>
+              <th>Nom</th>
+              <th>Qté</th>
+              <th>Prix achat</th>
+              <th>Prix actuel</th>
+              <th>Valeur</th>
+              <th>Gain</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
-  <div id="authBox" class="auth-box">
-
-    <h2>Connexion</h2>
-
-    <input type="email" id="email" placeholder="email@gmail.com">
-
-    <input type="password" id="password" placeholder="mot de passe">
-
-    <button id="signupBtn" class="btn btn-primary">
-      Créer un compte
-    </button>
-
-    <button
-      id="loginBtn"
-      class="btn"
-      style="background:#334155;margin-left:10px;"
-    >
-      Connexion
-    </button>
-
-    <p id="status"></p>
-
-  </div>
-
-  <div id="app" class="hidden">
-
-    <div class="cards">
-
-      <div class="card">
-        Valeur totale
-        <strong id="totalValue">0 €</strong>
-      </div>
-
-      <div class="card">
-        Gain / Perte
-        <strong id="totalGain">0 €</strong>
-      </div>
-
-      <div class="card">
-        Performance
-        <strong id="totalPerf">0%</strong>
-      </div>
-
-      <div class="card">
-        Positions
-        <strong id="stockCount">0</strong>
-      </div>
-
-    </div>
-
-    <div class="panel">
-
-      <h2>Ajouter une action</h2>
-
-      <input type="text" id="symbol" placeholder="AAPL">
-      <input type="text" id="name" placeholder="Apple">
-      <input type="number" id="quantity" placeholder="Quantité">
-      <input type="number" id="buyPrice" placeholder="Prix achat">
-      <input type="number" id="currentPrice" placeholder="Prix actuel">
-
-      <button id="addBtn" class="btn btn-primary">
-        Ajouter
-      </button>
-
-    </div>
-
-    <div class="panel">
-
-      <h2>Mon portefeuille</h2>
-
-      <table>
-
-        <thead>
-          <tr>
-            <th>Symbole</th>
-            <th>Nom</th>
-            <th>Qté</th>
-            <th>Valeur</th>
-            <th>Gain</th>
-            <th></th>
-          </tr>
-        </thead>
-
-        <tbody id="tableBody"></tbody>
-
-      </table>
-
-    </div>
-
-  </div>
-
-</div>
-
-<script src="supabase.js"></script>
-<script src="app.js"></script>
-
+  <script src="supabase.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

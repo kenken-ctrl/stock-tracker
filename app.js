@@ -1,364 +1,319 @@
-const authBox = document.getElementById("authBox");
-const app = document.getElementById("app");
-const statusEl = document.getElementById("status");
-const logoutBtn = document.getElementById("logoutBtn");
-const refreshBtn = document.getElementById("refreshBtn");
-const tableBody = document.getElementById("tableBody");
-const stockSelect = document.getElementById("stockSelect");
+const authBox =
+  document.getElementById("authBox");
 
-const symbolInput = document.getElementById("symbol");
-const nameInput = document.getElementById("name");
-const quantityInput = document.getElementById("quantity");
+const app =
+  document.getElementById("app");
 
-const MARKET_DATA_API_KEY = "TA_CLE_API_MARCHE";
-const MARKET_DATA_ENDPOINT = "https://finnhub.io/api/v1/quote";
+const statusEl =
+  document.getElementById("status");
+
+const logoutBtn =
+  document.getElementById("logoutBtn");
+
+const refreshBtn =
+  document.getElementById("refreshBtn");
+
+const tableBody =
+  document.getElementById("tableBody");
+
+const stockSelect =
+  document.getElementById("stockSelect");
+
+const symbolInput =
+  document.getElementById("symbol");
+
+const nameInput =
+  document.getElementById("name");
+
+const quantityInput =
+  document.getElementById("quantity");
+
+const API_KEY =
+  "TA_CLE_FINNHUB";
 
 let currentUser = null;
 let holdings = [];
-let autoRefreshHandle = null;
-let refreshInProgress = false;
 
-function euro(value) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 2
-  }).format(value);
+function euro(v) {
+  return new Intl.NumberFormat(
+    "fr-FR",
+    {
+      style: "currency",
+      currency: "EUR"
+    }
+  ).format(v);
 }
 
-function signedEuro(value) {
-  const absValue = Math.abs(Number(value) || 0);
-  return `${value >= 0 ? "+" : "-"}${euro(absValue)}`;
-}
-
-function setStatus(message) {
-  statusEl.textContent = message || "";
+function setStatus(text) {
+  statusEl.textContent = text;
 }
 
 function showApp() {
+
   authBox.classList.add("hidden");
   app.classList.remove("hidden");
+
   logoutBtn.classList.remove("hidden");
   refreshBtn.classList.remove("hidden");
 }
 
 function showAuth() {
+
   authBox.classList.remove("hidden");
   app.classList.add("hidden");
+
   logoutBtn.classList.add("hidden");
   refreshBtn.classList.add("hidden");
 }
 
-function clearForm() {
-  stockSelect.value = "";
-  symbolInput.value = "";
-  nameInput.value = "";
-  quantityInput.value = "";
-}
-
-function startAutoRefresh() {
-  stopAutoRefresh();
-  autoRefreshHandle = window.setInterval(() => {
-    refreshLivePrices({ silent: true }).catch(console.error);
-  }, 5 * 60 * 1000);
-}
-
-function stopAutoRefresh() {
-  if (autoRefreshHandle) {
-    clearInterval(autoRefreshHandle);
-    autoRefreshHandle = null;
-  }
-}
-
-function renderStockSelect() {
-  const uniqueStocks = [];
-  const seen = new Set();
-
-  for (const stock of holdings) {
-    if (seen.has(stock.symbol)) continue;
-    seen.add(stock.symbol);
-    uniqueStocks.push(stock);
-  }
-
-  if (!uniqueStocks.length) {
-    stockSelect.innerHTML = '<option value="">Aucune action suivie</option>';
-    stockSelect.disabled = true;
-    return;
-  }
-
-  stockSelect.disabled = false;
-  stockSelect.innerHTML = `
-    <option value="">Choisir une action déjà suivie</option>
-    ${uniqueStocks
-      .map(
-        (stock) => `
-          <option value="${stock.symbol}">${stock.symbol} - ${stock.name}</option>
-        `
-      )
-      .join("")}
-  `;
-}
-
-stockSelect.addEventListener("change", () => {
-  const symbol = stockSelect.value;
-  if (!symbol) return;
-
-  const selectedStock = holdings.find((stock) => stock.symbol === symbol);
-  if (!selectedStock) return;
-
-  symbolInput.value = selectedStock.symbol;
-  nameInput.value = selectedStock.name;
-  setStatus(`Action ${selectedStock.symbol} chargée.`);
-});
-
 async function signup() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
 
-  if (!email || !password) {
-    setStatus("Remplis l'email et le mot de passe.");
-    return;
-  }
+  const email =
+    document.getElementById("email").value;
 
-  const { error } = await supabaseClient.auth.signUp({
-    email,
-    password
-  });
+  const password =
+    document.getElementById("password").value;
+
+  const { error } =
+    await supabaseClient.auth.signUp({
+      email,
+      password
+    });
 
   if (error) {
-    console.error(error);
     setStatus(error.message);
     return;
   }
 
-  setStatus("Compte créé avec succès. Vérifie ta boîte mail si la confirmation est activée.");
+  setStatus("Compte créé");
 }
 
 async function login() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
 
-  if (!email || !password) {
-    setStatus("Remplis l'email et le mot de passe.");
-    return;
-  }
+  const email =
+    document.getElementById("email").value;
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
+  const password =
+    document.getElementById("password").value;
+
+  const { data, error } =
+    await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
 
   if (error) {
-    console.error(error);
     setStatus(error.message);
     return;
   }
 
   currentUser = data.user;
+
   showApp();
-  await loadHoldings();
-  await refreshLivePrices({ silent: true });
-  startAutoRefresh();
-  setStatus("Connecté.");
+
+  loadHoldings();
 }
 
 async function logout() {
+
   await supabaseClient.auth.signOut();
+
   currentUser = null;
-  holdings = [];
-  stopAutoRefresh();
+
   showAuth();
-  render();
-  setStatus("Déconnecté.");
 }
 
 async function loadHoldings() {
-  if (!currentUser) return;
 
-  const { data, error } = await supabaseClient
-    .from("holdings")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .order("created_at", { ascending: false });
+  const { data, error } =
+    await supabaseClient
+      .from("holdings")
+      .select("*")
+      .order("created_at", {
+        ascending: false
+      });
 
   if (error) {
     console.error(error);
-    setStatus(error.message);
     return;
   }
 
   holdings = data || [];
+
   render();
-  renderStockSelect();
+  renderDropdown();
 }
 
-async function fetchLivePrice(symbol) {
-  const apiKey = MARKET_DATA_API_KEY.trim();
+function renderDropdown() {
 
-  if (!apiKey || apiKey === "TA_CLE_API_MARCHE") {
-    return null;
-  }
+  const unique = [];
 
-  const url = `${MARKET_DATA_ENDPOINT}?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(apiKey)}`;
-  const response = await fetch(url);
+  holdings.forEach(stock => {
 
-  if (!response.ok) {
-    throw new Error(`Erreur API prix: ${response.status}`);
-  }
+    if (
+      !unique.find(
+        s => s.symbol === stock.symbol
+      )
+    ) {
+      unique.push(stock);
+    }
+  });
 
-  const data = await response.json();
-  const price = Number(data.c);
+  stockSelect.innerHTML =
+    `<option value="">Actions déjà suivies</option>`;
 
-  if (!Number.isFinite(price) || price <= 0) {
-    return null;
-  }
+  unique.forEach(stock => {
 
-  return price;
+    stockSelect.innerHTML += `
+      <option value="${stock.symbol}">
+        ${stock.symbol} - ${stock.name}
+      </option>
+    `;
+  });
 }
 
-async function refreshLivePrices({ silent = false } = {}) {
-  if (!currentUser || refreshInProgress || holdings.length === 0) return;
+stockSelect.addEventListener(
+  "change",
+  () => {
 
-  refreshInProgress = true;
+    const symbol =
+      stockSelect.value;
 
-  try {
-    let updatedCount = 0;
+    const stock =
+      holdings.find(
+        s => s.symbol === symbol
+      );
 
-    for (let i = 0; i < holdings.length; i++) {
-      const stock = holdings[i];
+    if (!stock) return;
 
-      let livePrice = null;
-      try {
-        livePrice = await fetchLivePrice(stock.symbol);
-      } catch (error) {
-        console.error(error);
-      }
-
-      if (!Number.isFinite(livePrice) || livePrice <= 0) continue;
-
-      if (Number(stock.current_price) !== livePrice) {
-        const { error } = await supabaseClient
-          .from("holdings")
-          .update({ current_price: livePrice })
-          .eq("id", stock.id);
-
-        if (!error) {
-          holdings[i] = { ...stock, current_price: livePrice };
-          updatedCount++;
-        } else {
-          console.error(error);
-        }
-      }
-    }
-
-    if (updatedCount > 0) {
-      render();
-      renderStockSelect();
-    }
-
-    if (!silent) {
-      setStatus(updatedCount > 0 ? "Cours actualisés." : "Aucune mise à jour nécessaire.");
-    }
-  } finally {
-    refreshInProgress = false;
+    symbolInput.value = stock.symbol;
+    nameInput.value = stock.name;
   }
-}
+);
 
 function render() {
+
   tableBody.innerHTML = "";
 
   let totalValue = 0;
   let invested = 0;
 
-  if (!holdings.length) {
-    tableBody.innerHTML = `
-      <tr>
-        <td colspan="8" class="muted">Aucune action pour le moment.</td>
-      </tr>
-    `;
-  }
+  holdings.forEach(stock => {
 
-  holdings.forEach((stock) => {
-    const quantity = Number(stock.quantity) || 0;
-    const buyPrice = Number(stock.buy_price) || 0;
-    const currentPrice = Number(stock.current_price) || 0;
-    const value = quantity * currentPrice;
-    const cost = quantity * buyPrice;
-    const gain = value - cost;
+    const value =
+      stock.quantity * stock.current_price;
+
+    const cost =
+      stock.quantity * stock.buy_price;
+
+    const gain =
+      value - cost;
 
     totalValue += value;
     invested += cost;
 
-    const tr = document.createElement("tr");
+    const tr =
+      document.createElement("tr");
+
     tr.innerHTML = `
       <td>${stock.symbol}</td>
       <td>${stock.name}</td>
-      <td>${quantity}</td>
-      <td>${euro(buyPrice)}</td>
-      <td>${euro(currentPrice)}</td>
+      <td>${stock.quantity}</td>
+      <td>${euro(stock.buy_price)}</td>
+      <td>${euro(stock.current_price)}</td>
       <td>${euro(value)}</td>
-      <td class="${gain >= 0 ? "positive" : "negative"}">${signedEuro(gain)}</td>
+      <td class="${
+        gain >= 0
+        ? "positive"
+        : "negative"
+      }">
+        ${euro(gain)}
+      </td>
       <td>
-        <button class="btn btn-danger" onclick="deleteStock('${stock.id}')">Supprimer</button>
+        <button
+          class="btn btn-danger"
+          onclick="deleteStock('${stock.id}')"
+        >
+          Supprimer
+        </button>
       </td>
     `;
 
     tableBody.appendChild(tr);
   });
 
-  const totalGain = totalValue - invested;
-  const perf = invested > 0 ? (totalGain / invested) * 100 : 0;
+  const totalGain =
+    totalValue - invested;
 
-  document.getElementById("totalValue").textContent = euro(totalValue);
-  document.getElementById("totalGain").textContent = signedEuro(totalGain);
-  document.getElementById("totalGain").className = totalGain >= 0 ? "positive" : "negative";
-  document.getElementById("totalPerf").textContent = `${perf.toFixed(2)}%`;
-  document.getElementById("totalPerf").className = perf >= 0 ? "positive" : "negative";
-  document.getElementById("stockCount").textContent = holdings.length;
+  const perf =
+    invested > 0
+    ? (totalGain / invested) * 100
+    : 0;
+
+  document.getElementById("totalValue")
+    .textContent = euro(totalValue);
+
+  document.getElementById("totalGain")
+    .textContent = euro(totalGain);
+
+  document.getElementById("totalPerf")
+    .textContent = perf.toFixed(2) + "%";
+
+  document.getElementById("stockCount")
+    .textContent = holdings.length;
+}
+
+async function getLivePrice(symbol) {
+
+  if (API_KEY === "TA_CLE_FINNHUB") {
+    return 0;
+  }
+
+  const response =
+    await fetch(
+      `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${API_KEY}`
+    );
+
+  const data =
+    await response.json();
+
+  return data.c || 0;
 }
 
 async function addStock() {
-  if (!currentUser) {
-    setStatus("Connecte-toi d'abord.");
+
+  const symbol =
+    symbolInput.value.toUpperCase();
+
+  const name =
+    nameInput.value;
+
+  const quantity =
+    Number(quantityInput.value);
+
+  if (
+    !symbol ||
+    !name ||
+    !quantity
+  ) {
+    setStatus("Remplis tous les champs");
     return;
   }
 
-  const symbol = symbolInput.value.trim().toUpperCase();
-  const name = nameInput.value.trim();
-  const quantity = Number(quantityInput.value);
+  const livePrice =
+    await getLivePrice(symbol);
 
-  if (!symbol || !name || !quantity) {
-    setStatus("Remplis le symbole, le nom et la quantité.");
-    return;
-  }
-
-  let currentPrice = null;
-
-  try {
-    currentPrice = await fetchLivePrice(symbol);
-  } catch (error) {
-    console.error(error);
-  }
-
-  if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
-    const existing = holdings.find((stock) => stock.symbol === symbol);
-    currentPrice = existing ? Number(existing.current_price) : null;
-  }
-
-  if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
-    currentPrice = 0;
-  }
-
-  const buyPrice = currentPrice;
-
-  const { error } = await supabaseClient.from("holdings").insert({
-    user_id: currentUser.id,
-    symbol,
-    name,
-    quantity,
-    buy_price: buyPrice,
-    current_price: currentPrice
-  });
+  const { error } =
+    await supabaseClient
+      .from("holdings")
+      .insert({
+        user_id: currentUser.id,
+        symbol,
+        name,
+        quantity,
+        buy_price: livePrice,
+        current_price: livePrice
+      });
 
   if (error) {
     console.error(error);
@@ -366,65 +321,62 @@ async function addStock() {
     return;
   }
 
-  clearForm();
-  await loadHoldings();
-  await refreshLivePrices({ silent: true });
-  setStatus(`Action ${symbol} ajoutée.`);
+  loadHoldings();
+}
+
+async function refreshPrices() {
+
+  for (const stock of holdings) {
+
+    const livePrice =
+      await getLivePrice(stock.symbol);
+
+    if (!livePrice) continue;
+
+    await supabaseClient
+      .from("holdings")
+      .update({
+        current_price: livePrice
+      })
+      .eq("id", stock.id);
+  }
+
+  loadHoldings();
 }
 
 async function deleteStock(id) {
-  const { error } = await supabaseClient
-    .from("holdings")
-    .delete()
-    .eq("id", id);
+
+  const { error } =
+    await supabaseClient
+      .from("holdings")
+      .delete()
+      .eq("id", id);
 
   if (error) {
     console.error(error);
-    setStatus(error.message);
     return;
   }
 
-  await loadHoldings();
-  await refreshLivePrices({ silent: true });
-  setStatus("Action supprimée.");
+  loadHoldings();
 }
 
-document.getElementById("signupBtn").addEventListener("click", signup);
-document.getElementById("loginBtn").addEventListener("click", login);
-document.getElementById("logoutBtn").addEventListener("click", logout);
-document.getElementById("addBtn").addEventListener("click", addStock);
-refreshBtn.addEventListener("click", () => refreshLivePrices());
+document
+  .getElementById("signupBtn")
+  .addEventListener("click", signup);
 
-supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-  const user = session?.user ?? null;
+document
+  .getElementById("loginBtn")
+  .addEventListener("click", login);
 
-  if (user) {
-    currentUser = user;
-    showApp();
-    await loadHoldings();
-    await refreshLivePrices({ silent: true });
-    startAutoRefresh();
-  } else {
-    currentUser = null;
-    holdings = [];
-    stopAutoRefresh();
-    showAuth();
-    render();
-  }
-});
+document
+  .getElementById("logoutBtn")
+  .addEventListener("click", logout);
 
-(async function init() {
-  const { data } = await supabaseClient.auth.getSession();
-  const user = data.session?.user ?? null;
+document
+  .getElementById("addBtn")
+  .addEventListener("click", addStock);
 
-  if (user) {
-    currentUser = user;
-    showApp();
-    await loadHoldings();
-    await refreshLivePrices({ silent: true });
-    startAutoRefresh();
-  } else {
-    showAuth();
-    render();
-  }
-})();
+refreshBtn.addEventListener(
+  "click",
+  refreshPrices
+);
